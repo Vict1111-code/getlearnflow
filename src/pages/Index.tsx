@@ -31,6 +31,7 @@ const levels = [
 
 export default function Dashboard() {
   const { user } = useAuth();
+  useStreakMaintenance();
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id], queryFn: () => user ? getProfile(user.id) : null, enabled: !!user,
