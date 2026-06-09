@@ -1,7 +1,7 @@
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import {
   LayoutDashboard, Timer, Users, User, Zap, Flame, LogOut, BarChart3, Sparkles, Target,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, FileText,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -11,12 +11,13 @@ import logo from '@/assets/learnflow-logo.png';
 import { useSidebarState } from '@/contexts/SidebarContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-// Primary navigation (7 items). Nested routes (memory, plan, report, leaderboard,
-// portfolio, mentor) are reached from inside their parent sections.
+// Primary navigation. Nested routes (memory, plan, leaderboard, portfolio, mentor)
+// are reached from inside their parent sections.
 export const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/study',     icon: Timer,           label: 'Study' },
   { to: '/goals',     icon: Target,          label: 'Goals' },
+  { to: '/report',    icon: FileText,        label: 'Daily Reports' },
   { to: '/analytics', icon: BarChart3,       label: 'Analysis' },
   { to: '/community', icon: Users,           label: 'Community' },
   { to: '/ai',        icon: Sparkles,        label: 'AI Assistant' },
@@ -50,7 +51,7 @@ export default function AppSidebar({ variant = 'fixed', onNavigate }: AppSidebar
 
   const isItemActive = (to: string) => {
     if (to === '/ai') return location.pathname.startsWith('/ai');
-    if (to === '/study') return location.pathname === '/study' || location.pathname.startsWith('/study/') || location.pathname === '/memory' || location.pathname === '/plan' || location.pathname === '/report';
+    if (to === '/study') return location.pathname === '/study' || location.pathname.startsWith('/study/') || location.pathname === '/memory' || location.pathname === '/plan';
     if (to === '/analytics') return location.pathname === '/analytics' || location.pathname === '/leaderboard';
     if (to === '/profile') return location.pathname === '/profile' || location.pathname === '/portfolio' || location.pathname === '/mentor';
     if (to === '/goals') return location.pathname === '/goals' || location.pathname.startsWith('/goal/');

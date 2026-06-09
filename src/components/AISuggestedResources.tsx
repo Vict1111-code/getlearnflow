@@ -55,7 +55,7 @@ export default function AISuggestedResources({
   const { user } = useAuth();
   const qc = useQueryClient();
   const [resources, setResources] = useState<SuggestedResource[]>([]);
-  const [meta, setMeta] = useState<{ effectiveLevel?: string; droppedCount?: number; validated?: number } | null>(null);
+  const [meta, setMeta] = useState<{ effectiveLevel?: string; droppedCount?: number; validated?: number; generatedAt?: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
   const [savingUrl, setSavingUrl] = useState<string | null>(null);
@@ -69,6 +69,33 @@ export default function AISuggestedResources({
         .from('saved_resources').select('url').eq('user_id', user!.id);
       if (error) throw error;
       return new Set((data || []).map(r => r.url));
+    },
+  });
+
+  // Load any cached suggestions for this goal so they survive refresh/tab switch.
+  useQuery({
+    queryKey: ['goal-resource-cache', goalId, user?.id],
+    enabled: !!user && !!goalId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('goal_resource_suggestions')
+        .select('*')
+        .eq('user_id', user!.id)
+        .eq('goal_id', goalId!)
+        .maybeSingle();
+      if (error) throw error;
+      if (data?.payload) {
+        const list = ((data.payload as any).resources || []) as SuggestedResource[];
+        setResources(list);
+        setMeta({
+          effectiveLevel: data.effective_level || (data.payload as any).effectiveLevel,
+          droppedCount: (data.payload as any).droppedCount,
+          validated: (data.payload as any).validated,
+          generatedAt: data.generated_at,
+        });
+        setFetched(true);
+      }
+      return data;
     },
   });
 
@@ -104,8 +131,21 @@ export default function AISuggestedResources({
         effectiveLevel: data?.effectiveLevel,
         droppedCount: data?.droppedCount,
         validated: data?.validated,
+        generatedAt: new Date().toISOString(),
       });
       setFetched(true);
+
+      // Persist cache so future loads/tab switches don't lose suggestions.
+      if (goalId) {
+        await supabase.from('goal_resource_suggestions').upsert({
+          user_id: user.id,
+          goal_id: goalId,
+          payload: { resources: list, droppedCount: data?.droppedCount, validated: data?.validated, effectiveLevel: data?.effectiveLevel } as any,
+          effective_level: data?.effectiveLevel || null,
+          generated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,goal_id' });
+        qc.invalidateQueries({ queryKey: ['goal-resource-cache', goalId, user.id] });
+      }
 
       if (list.length === 0) toast.info('No reachable resources found — try refreshing.');
       else if (data?.droppedCount > 0) toast.success(`${list.length} live resources (${data.droppedCount} unreachable links filtered out)`);

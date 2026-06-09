@@ -1,13 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Timer, Target, BarChart3, Users } from 'lucide-react';
+import { LayoutDashboard, Timer, FileText, BarChart3, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Mobile bottom nav mirrors the primary sidebar order, minus AI (floating button)
-// and Profile (top-bar avatar / sheet menu) to keep the bar to 5 destinations.
 const tabs = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
   { to: '/study',     icon: Timer,           label: 'Study' },
-  { to: '/goals',     icon: Target,          label: 'Goals' },
+  { to: '/report',    icon: FileText,        label: 'Reports' },
   { to: '/analytics', icon: BarChart3,       label: 'Analysis' },
   { to: '/community', icon: Users,           label: 'Community' },
 ];

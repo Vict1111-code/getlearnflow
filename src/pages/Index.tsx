@@ -14,6 +14,8 @@ import {
 import FocusGauge from '@/components/FocusGauge';
 import AnimatedCounter from '@/components/AnimatedCounter';
 import MiniHeatmap from '@/components/MiniHeatmap';
+import SessionRecoveryBanner from '@/components/study/SessionRecoveryBanner';
+import { useStreakMaintenance } from '@/hooks/useStreakMaintenance';
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -29,6 +31,7 @@ const levels = [
 
 export default function Dashboard() {
   const { user } = useAuth();
+  useStreakMaintenance();
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id], queryFn: () => user ? getProfile(user.id) : null, enabled: !!user,
@@ -93,6 +96,7 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="space-y-6">
+        <SessionRecoveryBanner />
         {/* Header */}
         <motion.div {...fadeUp} transition={{ duration: 0.5 }} className="flex flex-wrap items-end justify-between gap-3">
           <div>
