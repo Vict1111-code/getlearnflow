@@ -53,6 +53,80 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_chat_messages: {
+        Row: {
+          attachments: Json | null
+          chat_id: string
+          content: string
+          created_at: string
+          id: string
+          mode: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          chat_id: string
+          content: string
+          created_at?: string
+          id?: string
+          mode?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          chat_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          mode?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_chats: {
+        Row: {
+          created_at: string
+          favorite: boolean
+          id: string
+          mode: string
+          pinned: boolean
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          favorite?: boolean
+          id?: string
+          mode?: string
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          favorite?: boolean
+          id?: string
+          mode?: string
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_flashcards: {
         Row: {
           back: string
@@ -213,11 +287,18 @@ export type Database = {
         Row: {
           confusing_concepts: string | null
           created_at: string
+          distractions_count: number
           exercises: string | null
           explanation: string
+          focus_score: number | null
+          focus_seconds: number
+          goals_completed: number
           id: string
+          notes: string | null
           report_date: string
+          sessions_count: number
           studied: string
+          topics: string[]
           understood: string
           user_id: string
           xp_earned: number
@@ -225,11 +306,18 @@ export type Database = {
         Insert: {
           confusing_concepts?: string | null
           created_at?: string
+          distractions_count?: number
           exercises?: string | null
           explanation: string
+          focus_score?: number | null
+          focus_seconds?: number
+          goals_completed?: number
           id?: string
+          notes?: string | null
           report_date?: string
+          sessions_count?: number
           studied: string
+          topics?: string[]
           understood: string
           user_id: string
           xp_earned?: number
@@ -237,11 +325,18 @@ export type Database = {
         Update: {
           confusing_concepts?: string | null
           created_at?: string
+          distractions_count?: number
           exercises?: string | null
           explanation?: string
+          focus_score?: number | null
+          focus_seconds?: number
+          goals_completed?: number
           id?: string
+          notes?: string | null
           report_date?: string
+          sessions_count?: number
           studied?: string
+          topics?: string[]
           understood?: string
           user_id?: string
           xp_earned?: number
@@ -280,6 +375,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      goal_resource_suggestions: {
+        Row: {
+          effective_level: string | null
+          generated_at: string
+          goal_id: string
+          id: string
+          payload: Json
+          user_id: string
+        }
+        Insert: {
+          effective_level?: string | null
+          generated_at?: string
+          goal_id: string
+          id?: string
+          payload: Json
+          user_id: string
+        }
+        Update: {
+          effective_level?: string | null
+          generated_at?: string
+          goal_id?: string
+          id?: string
+          payload?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_resource_suggestions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "learning_goals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       group_challenges: {
         Row: {
@@ -780,6 +910,7 @@ export type Database = {
           concept_names: string[]
           created_at: string
           description: string | null
+          favorite: boolean
           goal_id: string | null
           id: string
           is_free: boolean
@@ -798,6 +929,7 @@ export type Database = {
           concept_names?: string[]
           created_at?: string
           description?: string | null
+          favorite?: boolean
           goal_id?: string | null
           id?: string
           is_free?: boolean
@@ -816,6 +948,7 @@ export type Database = {
           concept_names?: string[]
           created_at?: string
           description?: string | null
+          favorite?: boolean
           goal_id?: string | null
           id?: string
           is_free?: boolean
@@ -841,6 +974,7 @@ export type Database = {
       }
       session_reflections: {
         Row: {
+          ai_summary: Json | null
           challenged: string | null
           created_at: string
           distractions: string | null
@@ -855,6 +989,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_summary?: Json | null
           challenged?: string | null
           created_at?: string
           distractions?: string | null
@@ -869,6 +1004,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_summary?: Json | null
           challenged?: string | null
           created_at?: string
           distractions?: string | null
@@ -1095,6 +1231,7 @@ export type Database = {
       }
       calculate_focus_integrity: { Args: { p_user_id: string }; Returns: Json }
       can_view_profile: { Args: { _profile_user_id: string }; Returns: boolean }
+      decrement_missed_streaks: { Args: never; Returns: undefined }
       evaluate_user_achievements: {
         Args: { p_user_id: string }
         Returns: undefined
