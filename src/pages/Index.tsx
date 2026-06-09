@@ -96,6 +96,7 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="space-y-6">
+        <SessionRecoveryBanner />
         {/* Header */}
         <motion.div {...fadeUp} transition={{ duration: 0.5 }} className="flex flex-wrap items-end justify-between gap-3">
           <div>
