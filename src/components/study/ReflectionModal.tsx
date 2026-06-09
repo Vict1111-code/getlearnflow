@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Sparkles, Brain, Zap, Smile } from 'lucide-react';
 import { upsertSessionReflection, updateSessionTags } from '@/lib/database';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface ReflectionModalProps {
