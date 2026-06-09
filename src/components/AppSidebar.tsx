@@ -51,7 +51,7 @@ export default function AppSidebar({ variant = 'fixed', onNavigate }: AppSidebar
 
   const isItemActive = (to: string) => {
     if (to === '/ai') return location.pathname.startsWith('/ai');
-    if (to === '/study') return location.pathname === '/study' || location.pathname.startsWith('/study/') || location.pathname === '/memory' || location.pathname === '/plan' || location.pathname === '/report';
+    if (to === '/study') return location.pathname === '/study' || location.pathname.startsWith('/study/') || location.pathname === '/memory' || location.pathname === '/plan';
     if (to === '/analytics') return location.pathname === '/analytics' || location.pathname === '/leaderboard';
     if (to === '/profile') return location.pathname === '/profile' || location.pathname === '/portfolio' || location.pathname === '/mentor';
     if (to === '/goals') return location.pathname === '/goals' || location.pathname.startsWith('/goal/');
