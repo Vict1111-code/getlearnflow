@@ -75,7 +75,7 @@ export default function DailyReport() {
         exercises: form.exercises || null,
         confusing_concepts: form.confusingConcepts || null,
       });
-      toast.success('Report submitted! +50 XP earned');
+      toast.success('Report submitted — streak updated!');
       setShowForm(false);
       queryClient.invalidateQueries({ queryKey: ['today-report'] });
       queryClient.invalidateQueries({ queryKey: ['report-history'] });
