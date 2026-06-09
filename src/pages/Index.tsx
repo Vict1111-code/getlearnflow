@@ -14,6 +14,8 @@ import {
 import FocusGauge from '@/components/FocusGauge';
 import AnimatedCounter from '@/components/AnimatedCounter';
 import MiniHeatmap from '@/components/MiniHeatmap';
+import SessionRecoveryBanner from '@/components/study/SessionRecoveryBanner';
+import { useStreakMaintenance } from '@/hooks/useStreakMaintenance';
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
