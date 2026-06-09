@@ -52,7 +52,7 @@ export default function ReflectionModal({
       const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
       if (tags.length > 0) await updateSessionTags(sessionId, tags);
       if (!skip) {
-        await upsertSessionReflection({
+        const saved = await upsertSessionReflection({
           session_id: sessionId,
           user_id: userId,
           learned: learned || null,
@@ -63,7 +63,21 @@ export default function ReflectionModal({
           mood,
           tags,
         });
-        toast.success('Reflection saved — added to your learning memory');
+        toast.success('Reflection saved — generating coaching summary…');
+        // Fire-and-forget AI analysis; we don't block the modal close on it.
+        supabase.functions.invoke('ai-assistant', {
+          body: {
+            kind: 'reflection',
+            payload: {
+              topic, minutes,
+              focus_rating: focus, mood,
+              learned, challenged, revise, distractions,
+            },
+          },
+        }).then(async ({ data, error }) => {
+          if (error || !data?.output) return;
+          await supabase.from('session_reflections').update({ ai_summary: data.output }).eq('id', (saved as any).id);
+        }).catch(() => { /* best-effort */ });
       }
       onOpenChange(false);
       onSaved?.();
