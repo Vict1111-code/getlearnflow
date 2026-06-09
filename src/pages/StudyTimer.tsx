@@ -257,7 +257,7 @@ export default function StudyTimer() {
     if (stoppedSessionId && finalSeconds > 0) {
       try {
         await endStudySession(stoppedSessionId, finalSeconds, interruptions);
-        const xpEarned = Math.min(Math.floor(finalSeconds / 60), 60);
+        const xpEarned = Math.min(Math.floor(finalSeconds / 180), 20);
         toast.success(`Session ended! +${xpEarned} XP earned`);
         queryClient.invalidateQueries({ queryKey: ['today-sessions'] });
         queryClient.invalidateQueries({ queryKey: ['session-history'] });
