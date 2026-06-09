@@ -1,78 +1,105 @@
-## LearnFlow Refinement Plan
+# LearnFlow Phase 1 Stabilization Plan
 
-A refinement pass — not a rewrite. Preserves existing branding (dark/purple, glassmorphism), data model, and feature set. Work is organized into 7 phases so we can ship and validate incrementally.
+A targeted, non-redesign update. Keeps current navigation, layout, branding, and styling — only adds/fixes the items below.
 
-### Phase 1 — Information Architecture & Navigation
-- Collapse primary sidebar to 7 entries: **Dashboard, Study, Goals, Analysis, Community, AI Assistant, Profile**.
-- Move **Mentorship** under Profile (tab) and link from Community sidebar.
-- Move **Leaderboard, Achievements, Memory, Portfolio, Daily Report** into nested sections inside their parents (Analysis / Profile / Study).
-- Keep `SidebarContext` (already persists collapsed state in localStorage) and verify it never resets on route change.
-- Mobile: convert sidebar to Sheet/drawer with hamburger in `MobileTopBar`.
-- Active route highlighting and tooltips in collapsed mode (already partially in place — polish).
+---
 
-### Phase 2 — Dashboard refocus ("What should I do today?")
-Trim widgets to 6 sections in this order:
-1. Welcome header (name, streak, XP, level)
-2. Today's Goals (active goals + progress bars)
-3. Active Session card (Resume / Start)
-4. Progress Snapshot (focus hours, goals completed, recent activity)
-5. Community Highlights (trending posts, groups)
-6. Quick Actions (Start Session, Ask AI, Create Goal, View Analysis)
+## 1. Restore Daily Reports as a dedicated page
 
-Remove duplicated widgets, increase whitespace, single-column on mobile, 2-col tablet, 3-col desktop.
+- Add **Daily Reports** back into primary navigation (Dashboard · Study · Goals · **Daily Reports** · Analysis · Community · AI Assistant · Profile) in `AppSidebar.tsx` and `MobileBottomNav.tsx`.
+- Restore route `/report` → `DailyReport` page (already exists in `src/pages/DailyReport.tsx`); ensure it's wired and styled consistently.
+- Add an **Auto-generate today's report** action that pulls:
+  - Today's `study_sessions` (count, total minutes, topics, interruptions)
+  - Today's `session_reflections` (learned/challenged/revise text)
+  - Today's `learning_goals` updates (completed concepts)
+  - Today's focus score (from `focus_integrity_scores`)
+  - User notes (free-text field)
+- Display computed fields: study time, sessions completed, focus score, completed goals, topics, distractions, reflections.
+- On submit → insert into `daily_reports` and trigger streak update (see #2).
 
-### Phase 3 — Study system & session persistence (critical)
-- Introduce `StudySessionContext` mounted in `Layout` that holds: `activeSessionId`, `startedAt`, `elapsedSeconds`, `topic`, `goalId`, `notes`, `interruptions`, `isPaused`.
-- Persist to `localStorage` key `learnflow:active-session` on every tick + write-through to `study_sessions` row in Supabase every 30s.
-- On mount: hydrate from localStorage → reconcile with Supabase open row (`ended_at IS NULL`).
-- Survives refresh, tab switch, navigation. Timer ticks via `requestAnimationFrame` driven from `startedAt + Date.now()` (not interval state) so backgrounded tabs stay accurate.
-- Reflections modal already exists — add explicit save confirmation and tag with goal_id.
-- **Learning Memory**: new search page under Study (`/study/memory`) with full-text search across `study_sessions.topic/notes`, `session_reflections.learned/challenged/revise`, `daily_reports`. Uses Supabase `ilike` with debounced query and grouped results.
+## 2. Streak rework (Daily-Report driven)
 
-### Phase 4 — AI Assistant trim & polish
-- Reduce modes from 8 → **3 (Explain, Quiz Generator, Session Review)**. Keep underlying edge function intact; just hide the others from `ai-modes.ts`.
-- Floating button + drawer already implemented — verify they persist on every authenticated route and don't reset on navigation.
-- `/ai` workspace: keep three-pane layout; ensure chat history (localStorage) survives reloads.
-- File upload "+" button: accept PDF/DOCX/TXT/MD/Images; for PDFs/DOCX use a lightweight client extractor (`pdfjs-dist` text, `mammoth` for docx) and send extracted text as context. Images sent as base64 (model supports vision). Action chips: Summarize / Explain / Generate Quiz / Extract Concepts.
+- New rule: streak increments **only when a daily report is submitted that day**.
+- Missed day → `streak = max(0, streak - 1)` (no reset to 0).
+- Implement via DB trigger on `daily_reports` insert: replace `update_user_streak` logic to compare `last_active_date` set from report dates.
+- Add a daily background reconciliation (function `decrement_missed_streaks()`) callable on app load (client-triggered via edge function) to subtract 1 for users whose `last_active_date < CURRENT_DATE - 1`.
+- Invalidate React Query caches for profile/streak after submission for instant Dashboard update.
 
-### Phase 5 — Community trim
-- Remove `Resources`, `Code Snippets`, `Achievement Posts` categories from filters / create-post dialog.
-- Keep: Questions, Study Logs, Projects, Study Groups.
-- Polish upvotes / helpful / solved / trending sidebar.
+## 3. Save-to-Library fix
 
-### Phase 6 — Analysis as Learning Intelligence Center
-Tabbed structure: **Overview · Trends · Focus · Goals · Roadmap · Insights**
-- Overview: focus hours, sessions, goals, streak, XP cards
-- Trends: weekly/monthly chart + GitHub-style consistency heatmap (already partly built — promote)
-- Focus: avg focus score, productive hours histogram, distraction trend
-- Goals: per-goal progress %, time spent, completion forecast
-- Roadmap: SkillTree component (existing) — keep as signature feature
-- Insights: AI-generated weekly summary + gap list (calls existing AI edge function)
+- Audit `saved_resources` insert path in `AISuggestedResources.tsx` — surface insert errors with `toast.error`.
+- Ensure `user_id` is set explicitly to `auth.uid()` client-side; check RLS policy allows `INSERT WITH CHECK (user_id = auth.uid())`.
+- Add idempotency: unique `(user_id, url)` to prevent duplicates; show "Already saved" state.
+- Library page: confirm search/filter/remove/favorite already work; add `is_favorite` toggle if missing (column exists per saved_resources schema with 16 cols — verify).
 
-### Phase 7 — Polish: Landing / Auth / SEO / Perf
-- Landing: tighten sections (Hero, Features, How It Works, Community, AI, Testimonials, Pricing, FAQ, CTA), wire buttons (Login → `/login`, Get Started → `/signup`).
-- Auth flow already correct (signup → verify-email → onboarding → dashboard) — audit `ProtectedRoute` gating and Resend wiring.
-- SEO: update `index.html` title `LearnFlow — Build Consistency. Master Skills.`, meta description, OG/Twitter tags, JSON-LD `SoftwareApplication`.
-- Perf: audit unnecessary re-renders (memoize heavy lists), prevent `AuthContext` reloads on tab focus (already fixed), confirm no SWR/polling thrash.
-- Accessibility sweep: aria-labels on icon-only buttons, `h-dvh` over `h-screen`, single `<main>`, tap targets ≥44px.
+## 4. AI Assistant chat persistence (DB-backed)
 
-### Out of scope this pass
-- New database tables (everything fits existing schema).
-- Mentorship redesign beyond relocation.
-- Payment/Pricing implementation (Landing section is marketing only).
-- Advanced AI personalization (architecture prep only — context already piped via `useLearningContext`).
+- New tables:
+  - `ai_chats(id, user_id, title, mode, pinned, favorite, created_at, updated_at)`
+  - `ai_chat_messages(id, chat_id, user_id, role, content, attachments jsonb, created_at)`
+- Update `AIAssistantContext.tsx` to load chats from DB on mount, write through on create/send/rename/delete.
+- Keep localStorage as offline cache only.
+- History sidebar grouping: Today / Yesterday / Previous 7 days / Older (by `updated_at`).
+- Search by title/content client-side.
 
-### Technical notes
-- All work in `src/` — no schema changes needed.
-- New files (~15): `StudySessionContext.tsx`, `LearningMemory.tsx` page, study/AI helper hooks, refined Analysis tab components, file-upload util.
-- Edited files (~25): `AppSidebar.tsx`, `Layout.tsx`, `App.tsx` routes, `Dashboard` (`Index.tsx`), `StudyTimer.tsx`, `Community.tsx`, `Analytics.tsx`, `Landing.tsx`, `index.html`, `ai-modes.ts`, etc.
-- No new dependencies for Phases 1–3, 5–7. Phase 4 adds `pdfjs-dist` + `mammoth` for client-side file extraction.
+## 5. AI Reflection Analyzer
 
-### Suggested rollout order
-Phase 1 → 2 → 3 (highest user impact: nav + dashboard + no lost sessions) → 5 → 6 → 4 → 7.
+- Extend `session_reflections` with `ai_summary jsonb` (strengths, weak_areas, revision_topics, summary, next_step).
+- On reflection submit → call `ai-assistant` (kind: `reflection`) and store structured result.
+- Render the summary card inside Daily Reports, Session History, and Analysis.
 
-### Questions before I start
-1. Confirm the 7-item nav list above (any item you want kept at top level that I moved to a nested section?).
-2. AI Assistant: OK to hide the 5 extra modes (Flashcards, Study Coach, Resource Finder, Goal Planner, Roadmap) without deleting them, so they can come back later?
-3. File upload extractors: OK to add `pdfjs-dist` + `mammoth` (~600KB combined gzipped, lazy-loaded only on `/ai`)?
-4. Should Phase 7 also include a real OG image (I can generate one), or keep current placeholder?
+## 6. Goal Detail persistence
+
+- New table `goal_resource_suggestions(id, goal_id, user_id, payload jsonb, generated_at, effective_level)`.
+- `AISuggestedResources` reads cached suggestions for the goal; only re-fetches on explicit **Refresh** click.
+- Manual refresh button already exists — wire it to overwrite the cached row.
+- Confirm React Query keys are stable per `goalId` and `staleTime` is generous.
+
+## 7. Refresh-bug audit
+
+- Confirm `queryClient` defaults: `refetchOnWindowFocus: false`, `refetchOnReconnect: false`, `refetchOnMount: false`, large `staleTime` (already set in `App.tsx`).
+- Audit pages that override these with `refetch: true` or `enabled: true` re-fires.
+- Audit `useEffect` deps that cause remount loops; verify no `visibilitychange` listeners trigger refetch.
+
+## 8. XP rebalance (≈30% of current)
+
+- Update `add_xp_on_session()` trigger: XP = `LEAST(duration_seconds/60/3, 20)` (was `/60, 60`).
+- Update `add_xp_on_report` paths: scale `xp_earned` to 30% at write time, or update default in `daily_reports` insertion.
+- Update achievement `xp_reward` values to 30%.
+- Update community/streak XP rewards anywhere they're written.
+- Do NOT mutate existing user XP; only new gains affected.
+
+## 9. Study Session Recovery
+
+- Add localStorage key `learnflow:active-session` containing `{sessionId, goal, topic, startedAt, lastTick, notes, distractions, draftReflection}`.
+- In `StudyTimer.tsx`: write every 15s + on tab `beforeunload`.
+- Timer derives elapsed from `Date.now() - startedAt - pausedMs` (not solely `setInterval`).
+- On Dashboard mount, detect unfinished session and show recovery banner with **Resume / Save & finish / Discard**.
+- Sync to DB: on each autosave also `UPDATE study_sessions SET notes, interruptions, updated_at WHERE id=?`.
+
+## 10. App-wide error scan
+
+- Run typecheck (auto), check console/network for runtime errors, fix broken imports/dead links exposed by IA changes.
+
+---
+
+## Technical sections
+
+### Migrations
+1. `ai_chats`, `ai_chat_messages` (+ RLS, GRANTs).
+2. `goal_resource_suggestions` (+ RLS, GRANTs).
+3. `saved_resources` unique `(user_id, url)` + ensure `is_favorite boolean default false`.
+4. `session_reflections.ai_summary jsonb`.
+5. Replace `update_user_streak` trigger; new `decrement_missed_streaks()` SECURITY DEFINER fn.
+6. Update `add_xp_on_session` for new XP scale; update achievement rewards.
+
+### Files to add/edit (high level)
+- Add: `src/components/study/SessionRecoveryBanner.tsx`, `src/hooks/useSessionRecovery.ts`, `src/hooks/useAutoDailyReport.ts`.
+- Edit: `AppSidebar.tsx`, `MobileBottomNav.tsx`, `App.tsx`, `DailyReport.tsx`, `Index.tsx` (banner), `AIAssistantContext.tsx`, `AISuggestedResources.tsx`, `GoalDetail.tsx`, `StudyTimer.tsx`, `ReflectionModal.tsx`, `Library.tsx`, edge fn `ai-assistant`.
+
+### Out of scope
+- Visual redesign, new color/typography, new navigation patterns beyond restoring Daily Reports.
+
+---
+
+Approve and I'll execute migrations first (you'll review each), then ship the code changes in batches with verification at each step.
